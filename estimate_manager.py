@@ -524,16 +524,19 @@ def mold_management():
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import sqlite3
 
 def mold_analysis():
-    st.subheader("📊 금형 데이터 분석 (보관위치 + 조합 기준 시각화)")
+    st.subheader("📊 금형 데이터 분석 (도넛 + 트리맵 + 요약표)")
 
+    conn = sqlite3.connect("estimate.db", check_same_thread=False)
     df = pd.read_sql_query("SELECT * FROM molds", conn)
+
     if df.empty:
         st.warning("등록된 금형 정보가 없습니다.")
         return
 
-    # 컬럼 정리 (영문 → 한글)
+    # 한글 컬럼 매핑
     df = df.rename(columns={
         'standard': '기준값',
         'category': '상품군',
@@ -542,14 +545,12 @@ def mold_analysis():
         'location': '보관위치'
     })
 
+    df.columns = df.columns.str.strip()
+
     # 🔍 계단식 필터
-    st.markdown("### 🎯 조건 선택 (계단식 필터)")
-
-    df_filtered = df.copy()
-
-    기준값s = df_filtered['기준값'].dropna().unique().tolist()
-    선택_기준 = st.multiselect("1️⃣ 기준값", 기준값s, default=기준값s)
-    df_filtered = df_filtered[df_filtered['기준값'].isin(선택_기준)]
+    기준값s = df['기준값'].dropna().unique().tolist()
+    선택_기준값 = st.multiselect("1️⃣ 기준값", 기준값s, default=기준값s)
+    df_filtered = df[df['기준값'].isin(선택_기준값)]
 
     상품군s = df_filtered['상품군'].dropna().unique().tolist()
     선택_상품군 = st.multiselect("2️⃣ 상품군", 상품군s, default=상품군s)
@@ -567,65 +568,54 @@ def mold_analysis():
     선택_보관위치 = st.multiselect("5️⃣ 보관위치", 보관위치s, default=보관위치s)
     df_filtered = df_filtered[df_filtered['보관위치'].isin(선택_보관위치)]
 
+    if df_filtered.empty:
+        st.warning("선택한 조건에 맞는 금형이 없습니다.")
+        return
+
     st.markdown("---")
+    st.markdown("## 🍩 보관위치별 상품군 + 파트부 도넛 차트")
 
-    # 🍩 도넛 차트: 보관위치별 상품군 + 파트부 조합
-    st.markdown("## 🍩 보관위치별 도넛 차트 (상품군 + 파트부 기준)")
+    donut_cols = st.columns(min(4, len(선택_보관위치)))
+    for idx, loc in enumerate(선택_보관위치):
+        loc_df = df_filtered[df_filtered['보관위치'] == loc]
+        if loc_df.empty:
+            donut_cols[idx].info(f"{loc} 보관소에 데이터 없음")
+            continue
 
-    if 선택_보관위치:
-        donut_cols = st.columns(min(4, len(선택_보관위치)))
-        for idx, loc in enumerate(선택_보관위치):
-            loc_df = df_filtered[df_filtered['보관위치'] == loc].copy()
-            if loc_df.empty:
-                with donut_cols[idx]:
-                    st.info(f"{loc} 보관소에 금형이 없습니다.")
-                continue
+        donut_df = loc_df.groupby(['상품군', '파트부']).size().reset_index(name='수량')
+        donut_df['항목'] = donut_df['상품군'] + " / " + donut_df['파트부']
 
-            loc_df['조합'] = loc_df['상품군'].astype(str) + " - " + loc_df['파트부'].astype(str)
-            combo_counts = loc_df['조합'].value_counts().reset_index()
-            combo_counts.columns = ['조합', '수량']
-
-            fig = px.pie(
-                combo_counts,
-                names='조합',
-                values='수량',
-                title=f"{loc} 보관소",
-                hole=0.5
-            )
-            fig.update_traces(textinfo='label+percent')
-
-            with donut_cols[idx]:
-                st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("※ 보관위치를 선택해주세요.")
-
-    # 📊 바 차트: 모델명 + 파트부 조합 수량
-    st.markdown("## 📊 모델 + 파트부 조합별 금형 수량")
-
-    if not df_filtered.empty:
-        df_filtered['조합'] = df_filtered['모델명'].astype(str) + " - " + df_filtered['파트부'].astype(str)
-        model_counts = df_filtered['조합'].value_counts().reset_index()
-        model_counts.columns = ['모델+파트부', '수량']
-
-        fig_bar = px.bar(
-            model_counts,
-            x='모델+파트부',
-            y='수량',
-            text='수량',
-            title="모델 + 파트부별 금형 수량",
-            labels={'모델+파트부': '모델+파트부', '수량': '금형 수량'},
+        fig = px.pie(
+            donut_df,
+            names='항목',
+            values='수량',
+            title=f"{loc} 보관소",
+            hole=0.5
         )
-        fig_bar.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig_bar, use_container_width=True)
-    else:
-        st.warning("해당 조건에 맞는 금형 데이터가 없습니다.")
+        fig.update_traces(textinfo='percent+label')
 
-    # 📋 조건별 상세 테이블
-    st.markdown("### 📋 조건별 금형 상세 보기")
-    st.dataframe(df_filtered.drop(columns=['id']), use_container_width=True)
+        with donut_cols[idx]:
+            st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
-    st.info("📢 업무 자동화 플랫폼 👉 [gptonline.ai/ko](https://gptonline.ai/ko/)에서 더 많은 기능 확인하세요.")
+    st.markdown("## 🗂 모델 + 파트부 트리맵 (보관위치별 시각화)")
+
+    treemap_df = df_filtered.groupby(['보관위치', '모델명', '파트부']).size().reset_index(name='수량')
+
+    fig_tree = px.treemap(
+        treemap_df,
+        path=['보관위치', '모델명', '파트부'],
+        values='수량',
+        title="📦 보관위치 → 모델 → 파트부별 금형 수량"
+    )
+    fig_tree.update_traces(root_color="lightgrey")
+    st.plotly_chart(fig_tree, use_container_width=True)
+
+    st.markdown("---")
+    st.subheader("📋 조건별 요약 테이블 (수량 집계)")
+
+    summary = df_filtered.groupby(['보관위치', '상품군', '모델명', '파트부']).size().reset_index(name='금형수량')
+    st.dataframe(summary, use_container_width=True)
 
 
 def main():
