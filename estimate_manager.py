@@ -597,19 +597,77 @@ def mold_analysis():
         with donut_cols[idx]:
             st.plotly_chart(fig, use_container_width=True)
 
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import sqlite3
+
+def mold_analysis():
+    st.subheader("📊 금형 데이터 분석 (보관위치별 모델/파트 구성 + 상세정보 포함)")
+
+    conn = sqlite3.connect("estimate.db", check_same_thread=False)
+    df = pd.read_sql_query("SELECT * FROM molds", conn)
+
+    if df.empty:
+        st.warning("등록된 금형 정보가 없습니다.")
+        return
+
+    # 컬럼명 매핑
+    df = df.rename(columns={
+        'standard': '기준값',
+        'category': '상품군',
+        'part': '파트부',
+        'model_name': '모델명',
+        'location': '보관위치',
+        'name': '금형명'
+    })
+
+    # ✅ 계단식 필터
+    기준값s = df['기준값'].dropna().unique().tolist()
+    선택_기준값 = st.multiselect("1️⃣ 기준값 선택", 기준값s, default=기준값s)
+    df = df[df['기준값'].isin(선택_기준값)]
+
+    상품군s = df['상품군'].dropna().unique().tolist()
+    선택_상품군 = st.multiselect("2️⃣ 상품군 선택", 상품군s, default=상품군s)
+    df = df[df['상품군'].isin(선택_상품군)]
+
+    파트부s = df['파트부'].dropna().unique().tolist()
+    선택_파트부 = st.multiselect("3️⃣ 파트부 선택", 파트부s, default=파트부s)
+    df = df[df['파트부'].isin(선택_파트부)]
+
+    모델명s = df['모델명'].dropna().unique().tolist()
+    선택_모델명 = st.multiselect("4️⃣ 모델명 선택", 모델명s, default=모델명s)
+    df = df[df['모델명'].isin(선택_모델명)]
+
+    보관위치s = df['보관위치'].dropna().unique().tolist()
+    선택_보관위치 = st.multiselect("5️⃣ 보관위치 선택", 보관위치s, default=보관위치s)
+    df = df[df['보관위치'].isin(선택_보관위치)]
+
     st.markdown("---")
-    st.markdown("## 🗂 모델 + 파트부 트리맵 (보관위치별 시각화)")
 
-    treemap_df = df_filtered.groupby(['보관위치', '모델명', '파트부']).size().reset_index(name='수량')
+    if df.empty:
+        st.info("조건에 맞는 데이터가 없습니다.")
+        return
 
-    fig_tree = px.treemap(
-        treemap_df,
+    # ✅ 트리맵용 데이터 가공
+    df['조합'] = df['모델명'].astype(str) + " / " + df['파트부'].astype(str)
+    grouped = df.groupby(['보관위치', '모델명', '파트부']).agg(
+        금형수량=('금형명', 'count'),
+        금형목록=('금형명', lambda x: '<br>'.join(x))
+    ).reset_index()
+    grouped['조합'] = grouped['모델명'] + " / " + grouped['파트부']
+
+    # ✅ 트리맵 시각화
+    st.markdown("### 🗂️ 트리맵: 보관위치별 모델 / 파트 구성 + 금형목록")
+    fig = px.treemap(
+        grouped,
         path=['보관위치', '모델명', '파트부'],
-        values='수량',
-        title="📦 보관위치 → 모델 → 파트부별 금형 수량"
+        values='금형수량',
+        hover_data={'금형목록': True, '금형수량': True},
+        color='보관위치'
     )
-    fig_tree.update_traces(root_color="lightgrey")
-    st.plotly_chart(fig_tree, use_container_width=True)
+    fig.update_traces(root_color="lightgrey")
+    st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
     st.subheader("📋 조건별 요약 테이블 (수량 집계)")
