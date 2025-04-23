@@ -669,10 +669,9 @@ def mold_analysis():
     fig.update_traces(root_color="lightgrey")
     st.plotly_chart(fig, use_container_width=True)
 
-    st.markdown("---")
-    st.subheader("📋 조건별 요약 테이블 (수량 집계)")
-
-    summary = df_filtered.groupby(['보관위치', '상품군', '모델명', '파트부']).size().reset_index(name='금형수량')
+# ✅ 조건 요약 테이블
+    st.markdown("### 📋 조건별 금형 현황 요약")
+    summary = df.groupby(['보관위치', '상품군', '모델명', '파트부']).size().reset_index(name='금형 수량')
     st.dataframe(summary, use_container_width=True)
 
 
