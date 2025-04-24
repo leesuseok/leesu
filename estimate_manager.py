@@ -7,10 +7,16 @@ from datetime import datetime
 st.set_page_config(page_title="견적서 관리 시스템", layout="wide")
 
 # DB 초기화
+import sqlite3
+import streamlit as st
+
+# DB 초기화 함수
 @st.cache_resource
 def init_db():
     conn = sqlite3.connect("estimate.db", check_same_thread=False)
     cursor = conn.cursor()
+
+    # 견적 테이블 생성
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS estimates (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,11 +29,25 @@ def init_db():
             final_price REAL
         )
     """)
+
+    # 위치 변경 이력 테이블 생성
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS mold_location_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mold_id INTEGER,
+            이전위치 TEXT,
+            변경위치 TEXT,
+            변경일시 TEXT
+        )
+    """)
+
     conn.commit()
     return conn
 
+# 실제 연결 및 커서 객체 생성
 conn = init_db()
 cursor = conn.cursor()
+
 
 # 견적서 등록
 def add_estimate():
@@ -425,7 +445,7 @@ def mold_management():
         df = pd.read_excel(uploaded_file)
         df.columns = df.columns.str.strip()
         required_cols = ['금형코드', '금형명', '제작일자', '제작사', '사용상태',
-                         '보관위치', '비고', '기준값', '상품군', '파트부', '모델명']
+                         '보관위치', '품명', '기준값', '상품군', '파트부', '모델명']
         if not all(col in df.columns for col in required_cols):
             st.error(f"❌ 필수 컬럼 누락: {required_cols}")
             return
@@ -437,7 +457,7 @@ def mold_management():
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     row['금형코드'], row['금형명'], str(row['제작일자'])[:10],
-                    row['제작사'], row['사용상태'], row['보관위치'], row['비고'],
+                    row['제작사'], row['사용상태'], row['보관위치'], row['품명'],
                     row['기준값'], row['상품군'], row['파트부'], row['모델명']
                 ))
             conn.commit()
@@ -456,7 +476,7 @@ def mold_management():
         status = cols[1].text_input("사용상태")
         location = cols[2].text_input("보관위치")
 
-        note = cols[0].text_input("비고")
+        note = cols[0].text_input("품명")
         standard = cols[1].text_input("기준값")
         category = cols[2].text_input("상품군")
 
@@ -489,12 +509,12 @@ def mold_management():
     df_edit_display = df_edit.rename(columns={
         'code': '금형코드', 'name': '금형명', 'make_date': '제작일자',
         'manufacturer': '제작사', 'status': '사용상태', 'location': '보관위치',
-        'note': '비고', 'standard': '기준값', 'category': '상품군',
+        'note': '품명', 'standard': '기준값', 'category': '상품군',
         'part': '파트부', 'model_name': '모델명'
     })
 
     edited = st.data_editor(df_edit_display[['선택', 'id', '금형코드', '금형명', '제작일자', '제작사',
-                                             '사용상태', '보관위치', '비고', '기준값', '상품군', '파트부', '모델명']],
+                                             '사용상태', '보관위치', '품명', '기준값', '상품군', '파트부', '모델명']],
                             use_container_width=True, hide_index=True, num_rows="dynamic")
 
     # ✅ 삭제 기능
@@ -515,7 +535,7 @@ def mold_management():
                 WHERE id = ?
             """, (
                 row['금형코드'], row['금형명'], row['제작일자'], row['제작사'], row['사용상태'],
-                row['보관위치'], row['비고'], row['기준값'], row['상품군'], row['파트부'], row['모델명'], row['id']
+                row['보관위치'], row['품명'], row['기준값'], row['상품군'], row['파트부'], row['모델명'], row['id']
             ))
         conn.commit()
         st.success("✅ 수정사항이 저장되었습니다.")
@@ -527,7 +547,7 @@ import plotly.express as px
 import sqlite3
 
 def mold_analysis():
-    st.subheader("📊 금형 데이터 분석 (도넛 + 트리맵 + 요약표)")
+    st.subheader("📊 금형 데이터 분석 (보관위치별 모델/파트 구성 + 요약)")
 
     conn = sqlite3.connect("estimate.db", check_same_thread=False)
     df = pd.read_sql_query("SELECT * FROM molds", conn)
@@ -536,83 +556,7 @@ def mold_analysis():
         st.warning("등록된 금형 정보가 없습니다.")
         return
 
-    # 한글 컬럼 매핑
-    df = df.rename(columns={
-        'standard': '기준값',
-        'category': '상품군',
-        'part': '파트부',
-        'model_name': '모델명',
-        'location': '보관위치'
-    })
-
-    df.columns = df.columns.str.strip()
-
-    # 🔍 계단식 필터
-    기준값s = df['기준값'].dropna().unique().tolist()
-    선택_기준값 = st.multiselect("1️⃣ 기준값", 기준값s, default=기준값s)
-    df_filtered = df[df['기준값'].isin(선택_기준값)]
-
-    상품군s = df_filtered['상품군'].dropna().unique().tolist()
-    선택_상품군 = st.multiselect("2️⃣ 상품군", 상품군s, default=상품군s)
-    df_filtered = df_filtered[df_filtered['상품군'].isin(선택_상품군)]
-
-    파트부s = df_filtered['파트부'].dropna().unique().tolist()
-    선택_파트부 = st.multiselect("3️⃣ 파트부", 파트부s, default=파트부s)
-    df_filtered = df_filtered[df_filtered['파트부'].isin(선택_파트부)]
-
-    모델명s = df_filtered['모델명'].dropna().unique().tolist()
-    선택_모델명 = st.multiselect("4️⃣ 모델명", 모델명s, default=모델명s)
-    df_filtered = df_filtered[df_filtered['모델명'].isin(선택_모델명)]
-
-    보관위치s = df_filtered['보관위치'].dropna().unique().tolist()
-    선택_보관위치 = st.multiselect("5️⃣ 보관위치", 보관위치s, default=보관위치s)
-    df_filtered = df_filtered[df_filtered['보관위치'].isin(선택_보관위치)]
-
-    if df_filtered.empty:
-        st.warning("선택한 조건에 맞는 금형이 없습니다.")
-        return
-
-    st.markdown("---")
-    st.markdown("## 🍩 보관위치별 상품군 + 파트부 도넛 차트")
-
-    donut_cols = st.columns(min(4, len(선택_보관위치)))
-    for idx, loc in enumerate(선택_보관위치):
-        loc_df = df_filtered[df_filtered['보관위치'] == loc]
-        if loc_df.empty:
-            donut_cols[idx].info(f"{loc} 보관소에 데이터 없음")
-            continue
-
-        donut_df = loc_df.groupby(['상품군', '파트부']).size().reset_index(name='수량')
-        donut_df['항목'] = donut_df['상품군'] + " / " + donut_df['파트부']
-
-        fig = px.pie(
-            donut_df,
-            names='항목',
-            values='수량',
-            title=f"{loc} 보관소",
-            hole=0.5
-        )
-        fig.update_traces(textinfo='percent+label')
-
-        with donut_cols[idx]:
-            st.plotly_chart(fig, use_container_width=True)
-
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-import sqlite3
-
-def mold_analysis():
-    st.subheader("📊 금형 데이터 분석 (보관위치별 모델/파트 구성 + 상세정보 포함)")
-
-    conn = sqlite3.connect("estimate.db", check_same_thread=False)
-    df = pd.read_sql_query("SELECT * FROM molds", conn)
-
-    if df.empty:
-        st.warning("등록된 금형 정보가 없습니다.")
-        return
-
-    # 컬럼명 매핑
+    # 컬럼 한글화
     df = df.rename(columns={
         'standard': '기준값',
         'category': '상품군',
@@ -624,60 +568,164 @@ def mold_analysis():
 
     # ✅ 계단식 필터
     기준값s = df['기준값'].dropna().unique().tolist()
-    선택_기준값 = st.multiselect("1️⃣ 기준값 선택", 기준값s, default=기준값s)
+    선택_기준값 = st.multiselect("1️⃣ 기준값", 기준값s, default=기준값s)
     df = df[df['기준값'].isin(선택_기준값)]
 
     상품군s = df['상품군'].dropna().unique().tolist()
-    선택_상품군 = st.multiselect("2️⃣ 상품군 선택", 상품군s, default=상품군s)
+    선택_상품군 = st.multiselect("2️⃣ 상품군", 상품군s, default=상품군s)
     df = df[df['상품군'].isin(선택_상품군)]
 
     파트부s = df['파트부'].dropna().unique().tolist()
-    선택_파트부 = st.multiselect("3️⃣ 파트부 선택", 파트부s, default=파트부s)
+    선택_파트부 = st.multiselect("3️⃣ 파트부", 파트부s, default=파트부s)
     df = df[df['파트부'].isin(선택_파트부)]
 
     모델명s = df['모델명'].dropna().unique().tolist()
-    선택_모델명 = st.multiselect("4️⃣ 모델명 선택", 모델명s, default=모델명s)
+    선택_모델명 = st.multiselect("4️⃣ 모델명", 모델명s, default=모델명s)
     df = df[df['모델명'].isin(선택_모델명)]
 
     보관위치s = df['보관위치'].dropna().unique().tolist()
-    선택_보관위치 = st.multiselect("5️⃣ 보관위치 선택", 보관위치s, default=보관위치s)
+    선택_보관위치 = st.multiselect("5️⃣ 보관위치", 보관위치s, default=보관위치s)
     df = df[df['보관위치'].isin(선택_보관위치)]
 
     st.markdown("---")
 
     if df.empty:
-        st.info("조건에 맞는 데이터가 없습니다.")
+        st.info("조건에 맞는 금형 데이터가 없습니다.")
         return
 
-    # ✅ 트리맵용 데이터 가공
+    # ✅ 도넛 차트 (보관위치별 상품군/파트부 비중)
+    st.markdown("### 🍩 도넛 차트: 보관위치별 상품군/파트 구성")
+
+    donut_cols = st.columns(min(4, len(선택_보관위치)))
+    for i, loc in enumerate(선택_보관위치):
+        loc_df = df[df['보관위치'] == loc]
+        if loc_df.empty:
+            with donut_cols[i]:
+                st.info(f"{loc} 보관소: 데이터 없음")
+            continue
+
+        donut_data = loc_df.groupby(['상품군', '파트부']).size().reset_index(name='수량')
+        donut_data['구성'] = donut_data['상품군'] + " / " + donut_data['파트부']
+
+        fig = px.pie(donut_data, names='구성', values='수량', title=f"{loc} 구성 비율", hole=0.4)
+        fig.update_traces(textinfo='percent+label')
+
+        with donut_cols[i]:
+            st.plotly_chart(fig, use_container_width=True)
+
+    st.markdown("---")
+
+    # ✅ 트리맵: 모델/파트 조합 + 금형명
+    st.markdown("### 🌳 트리맵: 보관위치 → 모델명 → 파트부 구성")
+
     df['조합'] = df['모델명'].astype(str) + " / " + df['파트부'].astype(str)
     grouped = df.groupby(['보관위치', '모델명', '파트부']).agg(
         금형수량=('금형명', 'count'),
         금형목록=('금형명', lambda x: '<br>'.join(x))
     ).reset_index()
-    grouped['조합'] = grouped['모델명'] + " / " + grouped['파트부']
 
-    # ✅ 트리맵 시각화
-    st.markdown("### 🗂️ 트리맵: 보관위치별 모델 / 파트 구성 + 금형목록")
     fig = px.treemap(
         grouped,
         path=['보관위치', '모델명', '파트부'],
         values='금형수량',
-        hover_data={'금형목록': True, '금형수량': True},
+        hover_data={'금형수량': True, '금형목록': True},
         color='보관위치'
     )
     fig.update_traces(root_color="lightgrey")
     st.plotly_chart(fig, use_container_width=True)
 
-# ✅ 조건 요약 테이블
-    st.markdown("### 📋 조건별 금형 현황 요약")
-    summary = df.groupby(['보관위치', '상품군', '모델명', '파트부']).size().reset_index(name='금형 수량')
-    st.dataframe(summary, use_container_width=True)
+    st.markdown("---")
+
+    # ✅ 요약 테이블 개선: 보관위치별 금형 수량 + 비율
+    st.markdown("### 📋 요약: 보관위치별 금형 수량 및 상세 정보")
+
+    location_summary = df.groupby('보관위치').size().reset_index(name='금형 수량')
+    total = location_summary['금형 수량'].sum()
+    location_summary['비율(%)'] = location_summary['금형 수량'] / total * 100
+    location_summary['비율(%)'] = location_summary['비율(%)'].map("{:.1f}%".format)
+
+    st.dataframe(location_summary, use_container_width=True)
+
+    st.markdown("### 🔍 보관위치별 상세 현황 (모델명 + 파트부 기준)")
+    for loc in 선택_보관위치:
+        with st.expander(f"📦 {loc} 보관소 상세보기"):
+            sub_df = df[df['보관위치'] == loc]
+            detail = sub_df.groupby(['모델명', '파트부']).agg(
+                금형수량=('금형명', 'count'),
+                금형목록=('금형명', lambda x: ' / '.join(x))
+            ).reset_index()
+            st.dataframe(detail, use_container_width=True)
+def mold_location_change():
+    st.subheader("📦 금형 보관위치 변경")
+
+    # 데이터 로드
+    df = pd.read_sql_query("SELECT * FROM molds", conn)
+
+    if df.empty:
+        st.info("등록된 금형 정보가 없습니다.")
+        return
+
+    # 컬럼 한글화
+    df_display = df.copy()
+    df_display['선택'] = False
+    df_display = df_display.rename(columns={
+        'id': 'ID', 'code': '금형코드', 'name': '금형명',
+        'location': '보관위치', 'model_name': '모델명',
+        'part': '파트부', 'category': '상품군'
+    })
+
+    # ✅ 선택 박스 포함 테이블
+    st.markdown("### ✅ 보관위치 변경 대상 선택")
+    edited = st.data_editor(
+        df_display[['선택', 'ID', '금형코드', '금형명', '모델명', '파트부', '상품군', '보관위치']],
+        use_container_width=True,
+        hide_index=True,
+        num_rows="dynamic"
+    )
+
+    선택_ids = edited[edited['선택'] == True]['ID'].tolist()
+
+    # ✅ 새 위치 선택
+    if 선택_ids:
+        new_location = st.selectbox("📍 변경할 보관위치 선택", sorted(df['location'].dropna().unique()))
+        if st.button("🚚 선택 항목 위치 변경"):
+            for i in 선택_ids:
+                old_loc = df[df['id'] == i]['location'].values[0]
+                cursor.execute("UPDATE molds SET location = ? WHERE id = ?", (new_location, i))
+                cursor.execute("""
+                    INSERT INTO mold_location_history (mold_id, 이전위치, 변경위치, 변경일시)
+                    VALUES (?, ?, ?, ?)
+                """, (
+                    i, old_loc, new_location,
+                    datetime.now().strftime("%Y-%m-%d %H:%M")
+                ))
+            conn.commit()
+            st.success(f"✅ 선택된 {len(선택_ids)}개 금형의 보관위치가 '{new_location}'(으)로 변경되었습니다.")
+            st.rerun()
+    else:
+        st.info("🔎 먼저 금형을 선택해주세요.")
+
+    # ✅ 이력 테이블 조회
+    st.markdown("---")
+    st.subheader("📜 보관위치 변경 이력")
+
+    history = pd.read_sql_query("""
+        SELECT h.*, m.code AS 금형코드, m.name AS 금형명
+        FROM mold_location_history h
+        LEFT JOIN molds m ON h.mold_id = m.id
+        ORDER BY h.변경일시 DESC
+    """, conn)
+
+    if not history.empty:
+        st.dataframe(history[["금형코드", "금형명", "이전위치", "변경위치", "변경일시"]], use_container_width=True)
+    else:
+        st.info("📭 아직 보관위치 변경 이력이 없습니다.")
 
 
 def main():
     menu = st.sidebar.selectbox("📂 메뉴 선택", [
-        "견적서 등록", "엑셀 업로드", "견적서 목록 보기", "견적서 비교 분석", "금형관리", "금형데이터 분석"
+        "견적서 등록", "엑셀 업로드", "견적서 목록 보기", "견적서 비교 분석",
+        "금형관리", "금형데이터 분석", "📦 보관위치 변경"
     ])
 
     if menu == "견적서 등록":
@@ -692,6 +740,8 @@ def main():
         mold_management()
     elif menu == "금형데이터 분석":
         mold_analysis()
+    elif menu == "📦 보관위치 변경":
+        mold_location_change()
 
 
 if __name__ == "__main__":
