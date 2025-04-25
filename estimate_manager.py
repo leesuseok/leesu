@@ -4,14 +4,18 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 
-scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-credentials = Credentials.from_service_account_file(
-    "project11-457901-d742c683d428.json",
-    scopes=scope
-)
+SHEET_CREDENTIALS = "project11-457901-d742c683d428.json"
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+
+credentials = Credentials.from_service_account_file(SHEET_CREDENTIALS, scopes=SCOPES)
 gc = gspread.authorize(credentials)
-sheet_estimate = gc.open("견적서백업").sheet1
-sheet_mold = gc.open("금형백업").sheet1
+
+try:
+    sheet_estimate = gc.open("견적서백업").sheet1
+    sheet_mold = gc.open("금형백업").sheet1
+except Exception as e:
+    st.error(f"❌ Google Sheet 연결 실패: {e}")
+
 
 from datetime import datetime
 
