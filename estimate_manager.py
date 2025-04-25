@@ -91,23 +91,6 @@ backup_estimate_to_sheet({
 })
 
             st.success("✅ 견적서가 등록되었습니다.")
-def backup_estimate_to_sheet(row_dict):
-    row = [
-        row_dict.get("company"), row_dict.get("date"), row_dict.get("model"),
-        row_dict.get("category"), row_dict.get("product"),
-        row_dict.get("price"), row_dict.get("final_price")
-    ]
-    sheet_estimate.append_row(row)
-
-def backup_mold_to_sheet(row_dict):
-    row = [
-        row_dict.get("code"), row_dict.get("name"), row_dict.get("make_date"),
-        row_dict.get("manufacturer"), row_dict.get("status"), row_dict.get("location"),
-        row_dict.get("note"), row_dict.get("standard"), row_dict.get("category"),
-        row_dict.get("part"), row_dict.get("model_name")
-    ]
-    sheet_mold.append_row(row)
-
 
 # 엑셀 업로드
 def upload_excel():
@@ -468,7 +451,22 @@ def init_mold_db():
         )
     """)
     conn.commit()
+def backup_estimate_to_sheet(row_dict):
+    row = [
+        row_dict.get("company"), row_dict.get("date"), row_dict.get("model"),
+        row_dict.get("category"), row_dict.get("product"),
+        row_dict.get("price"), row_dict.get("final_price")
+    ]
+    sheet_estimate.append_row(row)
 
+def backup_mold_to_sheet(row_dict):
+    row = [
+        row_dict.get("code"), row_dict.get("name"), row_dict.get("make_date"),
+        row_dict.get("manufacturer"), row_dict.get("status"), row_dict.get("location"),
+        row_dict.get("note"), row_dict.get("standard"), row_dict.get("category"),
+        row_dict.get("part"), row_dict.get("model_name")
+    ]
+    sheet_mold.append_row(row)
 def mold_management():
     st.subheader("🛠 금형관리")
     init_mold_db()
