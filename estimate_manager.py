@@ -1,4 +1,6 @@
 import streamlit as st
+# 페이지 설정
+st.set_page_config(page_title="견적서 관리 시스템", layout="wide")
 import sqlite3
 import pandas as pd
 import gspread
@@ -19,8 +21,6 @@ except Exception as e:
 
 from datetime import datetime
 
-# 페이지 설정
-st.set_page_config(page_title="견적서 관리 시스템", layout="wide")
 
 # DB 초기화
 import sqlite3
