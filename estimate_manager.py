@@ -89,7 +89,7 @@ backup_estimate_to_sheet({
     "category": category, "product": product,
     "price": price, "final_price": final_price
 })
-
+            conn.commit()  
             st.success("✅ 견적서가 등록되었습니다.")
 
 # 엑셀 업로드
