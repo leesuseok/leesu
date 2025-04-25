@@ -1,6 +1,18 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
+import gspread
+from google.oauth2.service_account import Credentials
+
+scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+credentials = Credentials.from_service_account_file(
+    "project11-457901-d742c683d428.json",
+    scopes=scope
+)
+gc = gspread.authorize(credentials)
+sheet_estimate = gc.open("견적서백업").sheet1
+sheet_mold = gc.open("금형백업").sheet1
+
 from datetime import datetime
 
 # 페이지 설정
@@ -72,7 +84,30 @@ def add_estimate():
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (company, date.strftime("%Y-%m-%d"), model, category, product, price, final_price))
             conn.commit()
+backup_estimate_to_sheet({
+    "company": company, "date": date.strftime('%Y-%m-%d'), "model": model,
+    "category": category, "product": product,
+    "price": price, "final_price": final_price
+})
+
             st.success("✅ 견적서가 등록되었습니다.")
+def backup_estimate_to_sheet(row_dict):
+    row = [
+        row_dict.get("company"), row_dict.get("date"), row_dict.get("model"),
+        row_dict.get("category"), row_dict.get("product"),
+        row_dict.get("price"), row_dict.get("final_price")
+    ]
+    sheet_estimate.append_row(row)
+
+def backup_mold_to_sheet(row_dict):
+    row = [
+        row_dict.get("code"), row_dict.get("name"), row_dict.get("make_date"),
+        row_dict.get("manufacturer"), row_dict.get("status"), row_dict.get("location"),
+        row_dict.get("note"), row_dict.get("standard"), row_dict.get("category"),
+        row_dict.get("part"), row_dict.get("model_name")
+    ]
+    sheet_mold.append_row(row)
+
 
 # 엑셀 업로드
 def upload_excel():
@@ -492,6 +527,13 @@ def mold_management():
                 note, standard, category, part, model_name
             ))
             conn.commit()
+backup_mold_to_sheet({
+    "code": code, "name": name, "make_date": make_date,
+    "manufacturer": manufacturer, "status": status,
+    "location": location, "note": note,
+    "standard": standard, "category": category, "part": part, "model_name": model_name
+})
+
             st.success("✅ 금형 정보가 등록되었습니다.")
             st.rerun()
 
