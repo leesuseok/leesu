@@ -519,13 +519,6 @@ def mold_management():
                 note, standard, category, part, model_name
             ))
             conn.commit()
-backup_mold_to_sheet({
-    "code": code, "name": name, "make_date": make_date,
-    "manufacturer": manufacturer, "status": status,
-    "location": location, "note": note,
-    "standard": standard, "category": category, "part": part, "model_name": model_name
-})
-
             st.success("✅ 금형 정보가 등록되었습니다.")
             st.rerun()
 
