@@ -84,12 +84,6 @@ def add_estimate():
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (company, date.strftime("%Y-%m-%d"), model, category, product, price, final_price))
             conn.commit()
-backup_estimate_to_sheet({
-    "company": company, "date": date.strftime('%Y-%m-%d'), "model": model,
-    "category": category, "product": product,
-    "price": price, "final_price": final_price
-})
-            conn.commit()  
             st.success("✅ 견적서가 등록되었습니다.")
 
 # 엑셀 업로드
