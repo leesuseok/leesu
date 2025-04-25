@@ -1,5 +1,5 @@
 # 📄 requirements.txt 예시
 streamlit
+gspread
+oauth2client
 pandas
-openpyxl
-plotly
