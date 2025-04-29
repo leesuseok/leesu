@@ -772,22 +772,6 @@ def connect_to_google_sheets():
     gc = gspread.authorize(credentials)
     return gc
 
-        # 스프레드시트 이름 (사전 생성 필요)
-        estimate_sheet = client.open("견적서백업").sheet1
-        mold_sheet = client.open("금형백업").sheet1
-
-        # 견적서 백업
-        est_df = pd.read_sql_query("SELECT * FROM estimates", conn)
-        if not est_df.empty:
-            estimate_sheet.clear()
-            estimate_sheet.update([est_df.columns.values.tolist()] + est_df.values.tolist())
-
-        # 금형 백업
-        mold_df = pd.read_sql_query("SELECT * FROM molds", conn)
-        if not mold_df.empty:
-            mold_sheet.clear()
-            mold_sheet.update([mold_df.columns.values.tolist()] + mold_df.values.tolist())
-
         st.success("✅ Google Sheets 백업 완료!")
 
     except Exception as e:
