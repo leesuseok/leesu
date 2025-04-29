@@ -756,11 +756,21 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import json
 
-def backup_to_google_sheets():
-    try:
-        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        creds = ServiceAccountCredentials.from_json_keyfile_name("project11-457901-d742c683d428.json", scope)
-        client = gspread.authorize(creds)
+def connect_to_google_sheets():
+    import gspread
+    from google.oauth2.service_account import Credentials
+
+    creds_info = st.secrets["google_service_account"]
+
+    scopes = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    credentials = Credentials.from_service_account_info(
+        creds_info, scopes=scopes
+    )
+    gc = gspread.authorize(credentials)
+    return gc
 
         # 스프레드시트 이름 (사전 생성 필요)
         estimate_sheet = client.open("견적서백업").sheet1
