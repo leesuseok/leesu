@@ -771,10 +771,6 @@ def connect_to_google_sheets():
     )
     gc = gspread.authorize(credentials)
     return gc
-# -----------------------------------------------------------------------
-if st.sidebar.button("🗂 Google Sheets 백업 실행"):
-    backup_to_google_sheets()
-
 
 def main():
     menu = st.sidebar.selectbox("📂 메뉴 선택", [
