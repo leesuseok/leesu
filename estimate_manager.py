@@ -753,32 +753,30 @@ def mold_location_change():
         st.info("📭 아직 보관위치 변경 이력이 없습니다.")
 
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-import json
+from google.oauth2.service_account import Credentials
+import streamlit as st
 
 def connect_to_google_sheets():
-    import gspread
-    from google.oauth2.service_account import Credentials
-try:
-    client = gspread.service_account(filename=google_json_path)
-    estimate_sheet = client.open("견적서백업").sheet1
-    mold_sheet = client.open("금형백업").sheet1
-except Exception as e:
-    st.warning(f"❌ Google Sheet 연결 실패: {e}")
-    estimate_sheet = None
-    mold_sheet = None
+    try:
+        # 📁 .streamlit/secrets.toml에 입력된 인증 정보 불러오기
+        creds_info = st.secrets["google_service_account"]
 
-    creds_info = st.secrets["google_service_account"]
+        scopes = [
+            "https://spreadsheets.google.com/feeds",
+            "https://www.googleapis.com/auth/drive"
+        ]
+        credentials = Credentials.from_service_account_info(creds_info, scopes=scopes)
+        client = gspread.authorize(credentials)
 
-    scopes = [
-        "https://spreadsheets.google.com/feeds",
-        "https://www.googleapis.com/auth/drive"
-    ]
-    credentials = Credentials.from_service_account_info(
-        creds_info, scopes=scopes
-    )
-    gc = gspread.authorize(credentials)
-    return gc
+        # 📄 백업할 Google Sheet 문서 접근
+        estimate_sheet = client.open("견적서백업").sheet1
+        mold_sheet = client.open("금형백업").sheet1
+        return estimate_sheet, mold_sheet
+
+    except Exception as e:
+        st.warning(f"❌ Google Sheet 연결 실패: {e}")
+        return None, None
+
 
 def main():
     menu = st.sidebar.selectbox("📂 메뉴 선택", [
