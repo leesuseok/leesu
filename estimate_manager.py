@@ -28,6 +28,22 @@ def connect_google_sheets():
 
 sheet_estimate, sheet_mold = connect_google_sheets()
 
+def backup_estimate_to_sheet(row_dict):
+    row = [
+        row_dict.get("company"), row_dict.get("date"), row_dict.get("model"),
+        row_dict.get("category"), row_dict.get("product"),
+        row_dict.get("price"), row_dict.get("final_price")
+    ]
+    sheet_estimate.append_row(row)
+
+def backup_mold_to_sheet(row_dict):
+    row = [
+        row_dict.get("code"), row_dict.get("name"), row_dict.get("make_date"),
+        row_dict.get("manufacturer"), row_dict.get("status"), row_dict.get("location"),
+        row_dict.get("note"), row_dict.get("standard"), row_dict.get("category"),
+        row_dict.get("part"), row_dict.get("model_name")
+    ]
+    sheet_mold.append_row(row)
 
 
 from datetime import datetime
@@ -460,22 +476,6 @@ def init_mold_db():
         )
     """)
     conn.commit()
-def backup_estimate_to_sheet(row_dict):
-    row = [
-        row_dict.get("company"), row_dict.get("date"), row_dict.get("model"),
-        row_dict.get("category"), row_dict.get("product"),
-        row_dict.get("price"), row_dict.get("final_price")
-    ]
-    sheet_estimate.append_row(row)
-
-def backup_mold_to_sheet(row_dict):
-    row = [
-        row_dict.get("code"), row_dict.get("name"), row_dict.get("make_date"),
-        row_dict.get("manufacturer"), row_dict.get("status"), row_dict.get("location"),
-        row_dict.get("note"), row_dict.get("standard"), row_dict.get("category"),
-        row_dict.get("part"), row_dict.get("model_name")
-    ]
-    sheet_mold.append_row(row)
 def mold_management():
     st.subheader("🛠 금형관리")
     init_mold_db()
@@ -762,32 +762,6 @@ def mold_location_change():
         st.dataframe(history[["금형코드", "금형명", "이전위치", "변경위치", "변경일시"]], use_container_width=True)
     else:
         st.info("📭 아직 보관위치 변경 이력이 없습니다.")
-
-import gspread
-from google.oauth2.service_account import Credentials
-import streamlit as st
-
-def connect_to_google_sheets():
-    try:
-        # 📁 .streamlit/secrets.toml에 입력된 인증 정보 불러오기
-        creds_info = st.secrets["google_service_account"]
-
-        scopes = [
-            "https://spreadsheets.google.com/feeds",
-            "https://www.googleapis.com/auth/drive"
-        ]
-        credentials = Credentials.from_service_account_info(creds_info, scopes=scopes)
-        client = gspread.authorize(credentials)
-
-        # 📄 백업할 Google Sheet 문서 접근
-        estimate_sheet = client.open("견적서백업").sheet1
-        mold_sheet = client.open("금형백업").sheet1
-        return estimate_sheet, mold_sheet
-
-    except Exception as e:
-        st.warning(f"❌ Google Sheet 연결 실패: {e}")
-        return None, None
-
 
 def main():
     menu = st.sidebar.selectbox("📂 메뉴 선택", [
