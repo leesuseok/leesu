@@ -753,6 +753,7 @@ def mold_location_change():
         st.info("📭 아직 보관위치 변경 이력이 없습니다.")
 
 
+
 def main():
     menu = st.sidebar.selectbox("📂 메뉴 선택", [
         "견적서 등록", "엑셀 업로드", "견적서 목록 보기", "견적서 비교 분석",
@@ -773,6 +774,39 @@ def main():
         mold_analysis()
     elif menu == "📦 보관위치 변경":
         mold_location_change()
+# ------------------------ Google Sheets 백업 기능 ------------------------
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
+def backup_to_google_sheets():
+    try:
+        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        creds = ServiceAccountCredentials.from_json_keyfile_name("project11-457901-d742c683d428.json", scope)
+        client = gspread.authorize(creds)
+
+        # 스프레드시트 이름 (사전 생성 필요)
+        estimate_sheet = client.open("견적서백업").sheet1
+        mold_sheet = client.open("금형백업").sheet1
+
+        # 견적서 백업
+        est_df = pd.read_sql_query("SELECT * FROM estimates", conn)
+        if not est_df.empty:
+            estimate_sheet.clear()
+            estimate_sheet.update([est_df.columns.values.tolist()] + est_df.values.tolist())
+
+        # 금형 백업
+        mold_df = pd.read_sql_query("SELECT * FROM molds", conn)
+        if not mold_df.empty:
+            mold_sheet.clear()
+            mold_sheet.update([mold_df.columns.values.tolist()] + mold_df.values.tolist())
+
+        st.success("✅ Google Sheets 백업 완료!")
+
+    except Exception as e:
+        st.error(f"❌ Google Sheet 연결 실패: {e}")
+# -----------------------------------------------------------------------
+if st.sidebar.button("🗂 Google Sheets 백업 실행"):
+    backup_to_google_sheets()
 
 
 if __name__ == "__main__":
