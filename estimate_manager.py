@@ -771,9 +771,6 @@ def connect_to_google_sheets():
     )
     gc = gspread.authorize(credentials)
     return gc
-    
-    except Exception as e:
-        st.error(f"❌ Google Sheet 연결 실패: {e}")
 # -----------------------------------------------------------------------
 if st.sidebar.button("🗂 Google Sheets 백업 실행"):
     backup_to_google_sheets()
