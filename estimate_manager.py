@@ -1,22 +1,33 @@
 import streamlit as st
-# 페이지 설정
-st.set_page_config(page_title="견적서 관리 시스템", layout="wide")
 import sqlite3
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
+from datetime import datetime
 
-SHEET_CREDENTIALS = "project11-457901-d742c683d428.json"
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+# ✅ 페이지 설정
+st.set_page_config(page_title="견적서 관리 시스템", layout="wide")
 
-credentials = Credentials.from_service_account_file(SHEET_CREDENTIALS, scopes=SCOPES)
-gc = gspread.authorize(credentials)
+# ✅ Google Sheets 연결
+def connect_google_sheets():
+    try:
+        creds_info = st.secrets["google_service_account"]  # secrets.toml에 JSON 내용 입력
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+        credentials = Credentials.from_service_account_info(creds_info, scopes=scopes)
+        gc = gspread.authorize(credentials)
 
-try:
-    sheet_estimate = gc.open("견적서백업").sheet1
-    sheet_mold = gc.open("금형백업").sheet1
-except Exception as e:
-    st.error(f"❌ Google Sheet 연결 실패: {e}")
+        sheet_estimate = gc.open("견적서백업").sheet1
+        sheet_mold = gc.open("금형백업").sheet1
+        return sheet_estimate, sheet_mold
+    except Exception as e:
+        st.error(f"❌ Google Sheet 연결 실패: {e}")
+        return None, None
+
+sheet_estimate, sheet_mold = connect_google_sheets()
+
 
 
 from datetime import datetime
