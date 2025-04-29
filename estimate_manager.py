@@ -759,6 +759,14 @@ import json
 def connect_to_google_sheets():
     import gspread
     from google.oauth2.service_account import Credentials
+try:
+    client = gspread.service_account(filename=google_json_path)
+    estimate_sheet = client.open("견적서백업").sheet1
+    mold_sheet = client.open("금형백업").sheet1
+except Exception as e:
+    st.warning(f"❌ Google Sheet 연결 실패: {e}")
+    estimate_sheet = None
+    mold_sheet = None
 
     creds_info = st.secrets["google_service_account"]
 
