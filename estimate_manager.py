@@ -751,7 +751,7 @@ def mold_location_change():
         st.dataframe(history[["금형코드", "금형명", "이전위치", "변경위치", "변경일시"]], use_container_width=True)
     else:
         st.info("📭 아직 보관위치 변경 이력이 없습니다.")
-# ------------------------ Google Sheets 백업 기능 ------------------------
+
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
