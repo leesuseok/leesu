@@ -751,29 +751,6 @@ def mold_location_change():
         st.dataframe(history[["금형코드", "금형명", "이전위치", "변경위치", "변경일시"]], use_container_width=True)
     else:
         st.info("📭 아직 보관위치 변경 이력이 없습니다.")
-
-
-
-def main():
-    menu = st.sidebar.selectbox("📂 메뉴 선택", [
-        "견적서 등록", "엑셀 업로드", "견적서 목록 보기", "견적서 비교 분석",
-        "금형관리", "금형데이터 분석", "📦 보관위치 변경"
-    ])
-
-    if menu == "견적서 등록":
-        add_estimate()
-    elif menu == "엑셀 업로드":
-        upload_excel()
-    elif menu == "견적서 목록 보기":
-        show_estimates()
-    elif menu == "견적서 비교 분석":
-        compare_estimates()
-    elif menu == "금형관리":
-        mold_management()
-    elif menu == "금형데이터 분석":
-        mold_analysis()
-    elif menu == "📦 보관위치 변경":
-        mold_location_change()
 # ------------------------ Google Sheets 백업 기능 ------------------------
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -808,6 +785,27 @@ def backup_to_google_sheets():
 if st.sidebar.button("🗂 Google Sheets 백업 실행"):
     backup_to_google_sheets()
 
+
+def main():
+    menu = st.sidebar.selectbox("📂 메뉴 선택", [
+        "견적서 등록", "엑셀 업로드", "견적서 목록 보기", "견적서 비교 분석",
+        "금형관리", "금형데이터 분석", "📦 보관위치 변경"
+    ])
+
+    if menu == "견적서 등록":
+        add_estimate()
+    elif menu == "엑셀 업로드":
+        upload_excel()
+    elif menu == "견적서 목록 보기":
+        show_estimates()
+    elif menu == "견적서 비교 분석":
+        compare_estimates()
+    elif menu == "금형관리":
+        mold_management()
+    elif menu == "금형데이터 분석":
+        mold_analysis()
+    elif menu == "📦 보관위치 변경":
+        mold_location_change()
 
 if __name__ == "__main__":
     main()
