@@ -36,14 +36,24 @@ def backup_estimate_to_sheet(row_dict):
     ]
     sheet_estimate.append_row(row)
 
-def backup_mold_to_sheet(row_dict):
-    row = [
-        row_dict.get("code"), row_dict.get("name"), row_dict.get("make_date"),
-        row_dict.get("manufacturer"), row_dict.get("status"), row_dict.get("location"),
-        row_dict.get("note"), row_dict.get("standard"), row_dict.get("category"),
-        row_dict.get("part"), row_dict.get("model_name")
-    ]
-    sheet_mold.append_row(row)
+# 금형정보 백업 최적화된 버전
+def backup_mold_to_sheet_bulk():
+    conn = sqlite3.connect("estimate.db")
+    df_mold = pd.read_sql_query("SELECT * FROM molds", conn)
+
+    if not df_mold.empty and sheet_mold:
+        try:
+            sheet_mold.clear()
+            sheet_mold.append_row(df_mold.columns.tolist())
+
+            rows = df_mold.values.tolist()
+            sheet_mold.append_rows(rows)
+            st.success("✅ 금형정보 백업 완료 (최적화 방식)")
+        except Exception as e:
+            st.error(f"❌ 금형정보 백업 오류: {e}")
+    else:
+        st.warning("⚠️ 백업할 금형 데이터가 없습니다.")
+
 
 
 from datetime import datetime
