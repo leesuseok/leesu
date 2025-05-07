@@ -68,14 +68,17 @@ def backup_estimate_to_sheet_bulk():
     try:
         df_estimate = pd.read_sql_query("SELECT * FROM estimates", conn)
 
-        if not df_estimate.empty:
-            st.info("📤 Google Sheet에 견적서를 백업 중입니다...")
-            sheet_estimate.clear()
-            sheet_estimate.append_row(df_estimate.columns.tolist())  # 헤더 추가
-            sheet_estimate.append_rows(df_estimate.values.tolist())  # 데이터 추가
-            st.success("✅ 견적서 백업 완료 (최적화 방식)")
-        else:
+        if df_estimate is None or df_estimate.empty:
             st.warning("⚠️ 백업할 견적서 데이터가 없습니다.")
+            return
+
+        st.info("📤 Google Sheet에 견적서를 백업 중입니다...")
+        sheet_estimate.clear()
+        sheet_estimate.append_row(df_estimate.columns.tolist())  # 헤더 추가
+        sheet_estimate.append_rows(df_estimate.values.tolist())  # 데이터 추가
+        st.success("✅ 견적서 백업 완료 (최적화 방식)")
+    except pd.io.sql.DatabaseError as db_err:
+        st.error(f"❌ DB 연결 실패: {type(db_err).__name__} - {db_err}")
     except Exception as e:
         st.error(f"❌ 견적서 백업 오류: {type(e).__name__} - {e}")
 
@@ -98,6 +101,8 @@ def backup_mold_to_sheet_bulk():
         sheet_mold.append_row(df_mold.columns.tolist())  # 헤더 추가
         sheet_mold.append_rows(df_mold.values.tolist())  # 데이터 추가
         st.success("✅ 금형정보 백업 완료 (최적화 방식)")
+    except pd.io.sql.DatabaseError as db_err:
+        st.error(f"❌ DB 연결 실패: {type(db_err).__name__} - {db_err}")
     except Exception as e:
         st.error(f"❌ 금형정보 백업 오류: {type(e).__name__} - {e}")
 
