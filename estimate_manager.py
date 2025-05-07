@@ -54,8 +54,8 @@ try:
     conn = sqlite3.connect("estimate.db")
     cursor = conn.cursor()
     st.success("✅ SQLite DB 연결 성공")
-except Exception as db_error:
-    st.error(f"❌ DB 연결 실패: {db_error}")
+except Exception as e:
+    st.error(f"❌ DB 연결 실패: {type(e).__name__} - {e}")
     st.stop()
 
 # ✅ 견적서 백업 (일괄)
@@ -111,6 +111,7 @@ with st.expander("📤 Google Sheets 수동 백업"):
     with col2:
         if st.button("🧰 금형정보 백업"):
             backup_mold_to_sheet_bulk()
+
 
 # DB 초기화
 import sqlite3
