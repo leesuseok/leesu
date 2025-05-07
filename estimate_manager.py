@@ -8,8 +8,9 @@ from datetime import datetime
 # ✅ 페이지 설정
 st.set_page_config(page_title="견적서 관리 시스템", layout="wide")
 
-# ✅ 전역 변수 선언
+# ✅ 전역 변수 초기화
 sheet_estimate, sheet_mold = None, None
+conn = None
 
 # ✅ Google Sheets 연결
 def connect_google_sheets():
@@ -102,6 +103,7 @@ with st.expander("📤 Google Sheets 수동 백업"):
     with col2:
         if st.button("🧰 금형정보 백업"):
             backup_mold_to_sheet_bulk()
+
 
 # DB 초기화
 import sqlite3
