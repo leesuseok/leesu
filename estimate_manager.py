@@ -24,9 +24,9 @@ def connect_google_sheets():
         credentials = Credentials.from_service_account_info(creds_info, scopes=scopes)
         gc = gspread.authorize(credentials)
 
-        # 시트 열기
-        sheet_estimate = gc.open_by_url("https://docs.google.com/spreadsheets/d/1ApPFf_tzxrrB0RKVxetoIW-T3bpk-K3p2Ee7iYImhPo/edit?usp=sharing").sheet1
-        sheet_mold = gc.open_by_url("https://docs.google.com/spreadsheets/d/1U04T9sGQ9NrJeqSxLSkFJx2OZHscQbxoqwW-HyljCuk/edit#gid=0").sheet1
+        # 시트 열기 (gid 파라미터 제거하고, URL만 사용)
+        sheet_estimate = gc.open_by_url("https://docs.google.com/spreadsheets/d/1ApPFf_tzxrrB0RKVxetoIW-T3bpk-K3p2Ee7iYImhPo").sheet1
+        sheet_mold = gc.open_by_url("https://docs.google.com/spreadsheets/d/1U04T9sGQ9NrJeqSxLSkFJx2OZHscQbxoqwW-HyljCuk").sheet1
         
         if sheet_estimate and sheet_mold:
             st.success("✅ Google Sheets 연결 성공")
@@ -111,6 +111,7 @@ with st.expander("📤 Google Sheets 수동 백업"):
     with col2:
         if st.button("🧰 금형정보 백업"):
             backup_mold_to_sheet_bulk()
+
 
 # DB 초기화
 import sqlite3
