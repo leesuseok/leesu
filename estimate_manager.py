@@ -12,8 +12,12 @@ st.set_page_config(page_title="견적서 관리 시스템", layout="wide")
 conn = sqlite3.connect("estimate.db")
 cursor = conn.cursor()
 
+# ✅ 전역 변수 선언
+sheet_estimate, sheet_mold = None, None
+
 # ✅ Google Sheets 연결
 def connect_google_sheets():
+    global sheet_estimate, sheet_mold
     try:
         creds_info = st.secrets["google_service_account"]
         scopes = [
@@ -24,11 +28,13 @@ def connect_google_sheets():
         gc = gspread.authorize(credentials)
 
         # 시트 열기
-        global sheet_estimate, sheet_mold
         sheet_estimate = gc.open("견적서백업").sheet1
         sheet_mold = gc.open("금형백업").sheet1
         
-        st.success("✅ Google Sheets 연결 성공")
+        if sheet_estimate and sheet_mold:
+            st.success("✅ Google Sheets 연결 성공")
+        else:
+            st.error("❌ Google Sheets 연결 실패 - 시트를 찾을 수 없습니다.")
     except gspread.exceptions.SpreadsheetNotFound:
         st.error("❌ 스프레드시트 이름이 올바른지 확인하세요.")
     except gspread.exceptions.APIError as e:
@@ -41,9 +47,14 @@ connect_google_sheets()
 
 # ✅ 견적서 백업 (일괄)
 def backup_estimate_to_sheet_bulk():
+    global sheet_estimate
+    if not sheet_estimate:
+        st.error("❌ Google Sheet 연결 실패: 견적서백업 시트가 없습니다.")
+        return
+    
     df_estimate = pd.read_sql_query("SELECT * FROM estimates", conn)
 
-    if not df_estimate.empty and sheet_estimate:
+    if not df_estimate.empty:
         try:
             st.info("📤 Google Sheet에 견적서를 백업 중입니다...")
             sheet_estimate.clear()
@@ -57,9 +68,14 @@ def backup_estimate_to_sheet_bulk():
 
 # ✅ 금형정보 백업 (일괄)
 def backup_mold_to_sheet_bulk():
+    global sheet_mold
+    if not sheet_mold:
+        st.error("❌ Google Sheet 연결 실패: 금형백업 시트가 없습니다.")
+        return
+
     df_mold = pd.read_sql_query("SELECT * FROM molds", conn)
 
-    if not df_mold.empty and sheet_mold:
+    if not df_mold.empty:
         try:
             st.info("📤 Google Sheet에 금형 정보를 백업 중입니다...")
             sheet_mold.clear()
@@ -81,6 +97,7 @@ with st.expander("📤 Google Sheets 수동 백업"):
     with col2:
         if st.button("🧰 금형정보 백업"):
             backup_mold_to_sheet_bulk()
+
 
 
 
