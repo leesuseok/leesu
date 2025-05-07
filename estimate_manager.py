@@ -51,12 +51,19 @@ def backup_estimate_to_sheet_bulk():
         st.warning("⚠️ 백업할 견적서 데이터가 없습니다.")
 
 # ✅ 금형정보 백업 (이미 최적화됨)
+
 def backup_mold_to_sheet_bulk():
     conn = sqlite3.connect("estimate.db")
     df_mold = pd.read_sql_query("SELECT * FROM molds", conn)
 
-    if not df_mold.empty and sheet_mold:
+    # Google Sheet 연결 체크
+    if not sheet_mold:
+        st.error("❌ Google Sheet (금형백업) 연결 실패: 시트가 없거나 권한이 없습니다.")
+        return
+    
+    if not df_mold.empty:
         try:
+            st.info("📤 Google Sheet에 금형 정보를 백업 중입니다...")
             sheet_mold.clear()
             sheet_mold.append_row(df_mold.columns.tolist())  # 헤더 추가
             sheet_mold.append_rows(df_mold.values.tolist())  # 데이터 추가
@@ -65,8 +72,6 @@ def backup_mold_to_sheet_bulk():
             st.error(f"❌ 금형정보 백업 오류: {e}")
     else:
         st.warning("⚠️ 백업할 금형 데이터가 없습니다.")
-
-
 
 from datetime import datetime
 
