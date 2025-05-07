@@ -25,22 +25,29 @@ def connect_google_sheets():
         gc = gspread.authorize(credentials)
 
         # 시트 열기
-        sheet_estimate = gc.open("견적서백업").sheet1
-        sheet_mold = gc.open("금형백업").sheet1
+        sheet_estimate = gc.open_by_url("https://docs.google.com/spreadsheets/d/1U04T9sGQ9NrJeqSxLSkFJx2OZHscQbxoqwW-HyljCuk/edit#gid=0").sheet1
+        sheet_mold = gc.open_by_url("https://docs.google.com/spreadsheets/d/1U04T9sGQ9NrJeqSxLSkFJx2OZHscQbxoqwW-HyljCuk/edit#gid=0").sheet1
         
         if sheet_estimate and sheet_mold:
             st.success("✅ Google Sheets 연결 성공")
         else:
             st.error("❌ Google Sheets 연결 실패 - 시트를 찾을 수 없습니다.")
+            return False
     except gspread.exceptions.SpreadsheetNotFound:
         st.error("❌ 스프레드시트 이름이 올바른지 확인하세요.")
+        return False
     except gspread.exceptions.APIError as e:
         st.error(f"❌ Google API 오류: {e}")
+        return False
     except Exception as e:
         st.error(f"❌ 예외 발생: {type(e).__name__} - {e}")
+        return False
+    
+    return True
 
 # ✅ Google Sheets 연결 실행
-connect_google_sheets()
+if not connect_google_sheets():
+    st.stop()
 
 # ✅ SQLite DB 연결 (전역에서 1회만 연결)
 try:
@@ -49,6 +56,7 @@ try:
     st.success("✅ SQLite DB 연결 성공")
 except Exception as e:
     st.error(f"❌ DB 연결 실패: {e}")
+    st.stop()
 
 # ✅ 견적서 백업 (일괄)
 def backup_estimate_to_sheet_bulk():
@@ -103,9 +111,6 @@ with st.expander("📤 Google Sheets 수동 백업"):
     with col2:
         if st.button("🧰 금형정보 백업"):
             backup_mold_to_sheet_bulk()
-
-
-
 
 # DB 초기화
 import sqlite3
