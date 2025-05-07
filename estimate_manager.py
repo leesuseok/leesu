@@ -36,11 +36,11 @@ def connect_google_sheets():
     except gspread.exceptions.SpreadsheetNotFound:
         st.error("❌ 스프레드시트 이름이 올바른지 확인하세요.")
         return False
-    except gspread.exceptions.APIError as e:
-        st.error(f"❌ Google API 오류: {e}")
+    except gspread.exceptions.APIError as api_error:
+        st.error(f"❌ Google API 오류: {api_error}")
         return False
-    except Exception as e:
-        st.error(f"❌ 예외 발생: {type(e).__name__} - {e}")
+    except Exception as general_error:
+        st.error(f"❌ 예외 발생: {type(general_error).__name__} - {general_error}")
         return False
     
     return True
@@ -54,8 +54,8 @@ try:
     conn = sqlite3.connect("estimate.db")
     cursor = conn.cursor()
     st.success("✅ SQLite DB 연결 성공")
-except Exception as e:
-    st.error(f"❌ DB 연결 실패: {e}")
+except Exception as db_error:
+    st.error(f"❌ DB 연결 실패: {db_error}")
     st.stop()
 
 # ✅ 견적서 백업 (일괄)
