@@ -25,7 +25,7 @@ def connect_google_sheets():
         gc = gspread.authorize(credentials)
 
         # 시트 열기
-        sheet_estimate = gc.open_by_url("https://docs.google.com/spreadsheets/d/1U04T9sGQ9NrJeqSxLSkFJx2OZHscQbxoqwW-HyljCuk/edit#gid=0").sheet1
+        sheet_estimate = gc.open_by_url("https://docs.google.com/spreadsheets/d/1ApPFf_tzxrrB0RKVxetoIW-T3bpk-K3p2Ee7iYImhPo/edit?usp=sharing").sheet1
         sheet_mold = gc.open_by_url("https://docs.google.com/spreadsheets/d/1U04T9sGQ9NrJeqSxLSkFJx2OZHscQbxoqwW-HyljCuk/edit#gid=0").sheet1
         
         if sheet_estimate and sheet_mold:
@@ -39,8 +39,8 @@ def connect_google_sheets():
     except gspread.exceptions.APIError as api_error:
         st.error(f"❌ Google API 오류: {api_error}")
         return False
-    except Exception as general_error:
-        st.error(f"❌ 예외 발생: {type(general_error).__name__} - {general_error}")
+    except Exception as e:
+        st.error(f"❌ 예외 발생: {type(e).__name__} - {e}")
         return False
     
     return True
@@ -54,8 +54,8 @@ try:
     conn = sqlite3.connect("estimate.db")
     cursor = conn.cursor()
     st.success("✅ SQLite DB 연결 성공")
-except Exception as db_error:
-    st.error(f"❌ DB 연결 실패: {type(db_error).__name__} - {db_error}")
+except Exception as e:
+    st.error(f"❌ DB 연결 실패: {type(e).__name__} - {e}")
     st.stop()
 
 # ✅ 견적서 백업 (일괄)
@@ -111,8 +111,6 @@ with st.expander("📤 Google Sheets 수동 백업"):
     with col2:
         if st.button("🧰 금형정보 백업"):
             backup_mold_to_sheet_bulk()
-
-
 
 # DB 초기화
 import sqlite3
