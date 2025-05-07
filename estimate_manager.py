@@ -11,7 +11,7 @@ st.set_page_config(page_title="견적서 관리 시스템", layout="wide")
 # ✅ Google Sheets 연결
 def connect_google_sheets():
     try:
-        creds_info = st.secrets["google_service_account"]  # secrets.toml에 JSON 내용 입력
+        creds_info = st.secrets["google_service_account"]
         scopes = [
             "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/drive"
@@ -19,14 +19,20 @@ def connect_google_sheets():
         credentials = Credentials.from_service_account_info(creds_info, scopes=scopes)
         gc = gspread.authorize(credentials)
 
+        # 시트 열기
         sheet_estimate = gc.open("견적서백업").sheet1
         sheet_mold = gc.open("금형백업").sheet1
+        st.success("✅ Google Sheets 연결 성공")
         return sheet_estimate, sheet_mold
-    except Exception as e:
-        st.error(f"❌ Google Sheet 연결 실패: {e}")
-        return None, None
 
-sheet_estimate, sheet_mold = connect_google_sheets()
+    except gspread.exceptions.SpreadsheetNotFound:
+        st.error("❌ 스프레드시트 이름이 올바른지 확인하세요.")
+    except gspread.exceptions.APIError as e:
+        st.error(f"❌ Google API 오류: {e}")
+    except Exception as e:
+        st.error(f"❌ 예외 발생: {type(e).__name__} - {e}")
+    return None, None
+
 
 # ✅ 견적서 백업 (일괄)
 def backup_estimate_to_sheet_bulk():
