@@ -8,6 +8,10 @@ from datetime import datetime
 # ✅ 페이지 설정
 st.set_page_config(page_title="견적서 관리 시스템", layout="wide")
 
+# ✅ DB 연결 (전역에서 1회만 연결)
+conn = sqlite3.connect("estimate.db")
+cursor = conn.cursor()
+
 # ✅ Google Sheets 연결
 def connect_google_sheets():
     try:
@@ -20,48 +24,42 @@ def connect_google_sheets():
         gc = gspread.authorize(credentials)
 
         # 시트 열기
+        global sheet_estimate, sheet_mold
         sheet_estimate = gc.open("견적서백업").sheet1
         sheet_mold = gc.open("금형백업").sheet1
+        
         st.success("✅ Google Sheets 연결 성공")
-        return sheet_estimate, sheet_mold
-
     except gspread.exceptions.SpreadsheetNotFound:
         st.error("❌ 스프레드시트 이름이 올바른지 확인하세요.")
     except gspread.exceptions.APIError as e:
         st.error(f"❌ Google API 오류: {e}")
     except Exception as e:
         st.error(f"❌ 예외 발생: {type(e).__name__} - {e}")
-    return None, None
 
+# ✅ 연결 실행
+connect_google_sheets()
 
 # ✅ 견적서 백업 (일괄)
 def backup_estimate_to_sheet_bulk():
-    conn = sqlite3.connect("estimate.db")
     df_estimate = pd.read_sql_query("SELECT * FROM estimates", conn)
 
     if not df_estimate.empty and sheet_estimate:
         try:
+            st.info("📤 Google Sheet에 견적서를 백업 중입니다...")
             sheet_estimate.clear()
             sheet_estimate.append_row(df_estimate.columns.tolist())  # 헤더 추가
             sheet_estimate.append_rows(df_estimate.values.tolist())  # 데이터 추가
             st.success("✅ 견적서 백업 완료 (최적화 방식)")
         except Exception as e:
-            st.error(f"❌ 견적서 백업 오류: {e}")
+            st.error(f"❌ 견적서 백업 오류: {type(e).__name__} - {e}")
     else:
         st.warning("⚠️ 백업할 견적서 데이터가 없습니다.")
 
-# ✅ 금형정보 백업 (이미 최적화됨)
-
+# ✅ 금형정보 백업 (일괄)
 def backup_mold_to_sheet_bulk():
-    conn = sqlite3.connect("estimate.db")
     df_mold = pd.read_sql_query("SELECT * FROM molds", conn)
 
-    # Google Sheet 연결 체크
-    if not sheet_mold:
-        st.error("❌ Google Sheet (금형백업) 연결 실패: 시트가 없거나 권한이 없습니다.")
-        return
-    
-    if not df_mold.empty:
+    if not df_mold.empty and sheet_mold:
         try:
             st.info("📤 Google Sheet에 금형 정보를 백업 중입니다...")
             sheet_mold.clear()
@@ -69,18 +67,21 @@ def backup_mold_to_sheet_bulk():
             sheet_mold.append_rows(df_mold.values.tolist())  # 데이터 추가
             st.success("✅ 금형정보 백업 완료 (최적화 방식)")
         except Exception as e:
-            st.error(f"❌ 금형정보 백업 오류: {e}")
+            st.error(f"❌ 금형정보 백업 오류: {type(e).__name__} - {e}")
     else:
         st.warning("⚠️ 백업할 금형 데이터가 없습니다.")
 
-from datetime import datetime
-
+# ✅ 수동 백업 버튼
 with st.expander("📤 Google Sheets 수동 백업"):
-    if st.button("🗂️ 견적서 백업"):
-        backup_estimate_to_sheet_bulk()
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🗂️ 견적서 백업"):
+            backup_estimate_to_sheet_bulk()
 
-    if st.button("🧰 금형정보 백업"):
-        backup_mold_to_sheet_bulk()
+    with col2:
+        if st.button("🧰 금형정보 백업"):
+            backup_mold_to_sheet_bulk()
+
 
 
 
