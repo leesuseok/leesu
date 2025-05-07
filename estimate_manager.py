@@ -8,20 +8,12 @@ from datetime import datetime
 # ✅ 페이지 설정
 st.set_page_config(page_title="견적서 관리 시스템", layout="wide")
 
-# ✅ DB 연결 (전역에서 1회만 연결)
-try:
-    conn = sqlite3.connect("estimate.db")
-    cursor = conn.cursor()
-    st.success("✅ SQLite DB 연결 성공")
-except Exception as e:
-    st.error(f"❌ DB 연결 실패: {e}")
-
 # ✅ 전역 변수 선언
 sheet_estimate, sheet_mold = None, None
 
 # ✅ Google Sheets 연결
 def connect_google_sheets():
-    global sheet_estimate, sheet_mold
+    global sheet_estimate, sheet_mold  # 전역 변수 사용
     try:
         creds_info = st.secrets["google_service_account"]
         scopes = [
@@ -46,12 +38,20 @@ def connect_google_sheets():
     except Exception as e:
         st.error(f"❌ 예외 발생: {type(e).__name__} - {e}")
 
-# ✅ 연결 실행
+# ✅ Google Sheets 연결 실행
 connect_google_sheets()
+
+# ✅ SQLite DB 연결 (전역에서 1회만 연결)
+try:
+    conn = sqlite3.connect("estimate.db")
+    cursor = conn.cursor()
+    st.success("✅ SQLite DB 연결 성공")
+except Exception as e:
+    st.error(f"❌ DB 연결 실패: {e}")
 
 # ✅ 견적서 백업 (일괄)
 def backup_estimate_to_sheet_bulk():
-    global sheet_estimate
+    global sheet_estimate  # 전역 변수 사용
     if not sheet_estimate:
         st.error("❌ Google Sheet 연결 실패: 견적서백업 시트가 없습니다.")
         return
@@ -72,14 +72,14 @@ def backup_estimate_to_sheet_bulk():
 
 # ✅ 금형정보 백업 (일괄)
 def backup_mold_to_sheet_bulk():
-    global sheet_mold
+    global sheet_mold  # 전역 변수 사용
     if not sheet_mold:
         st.error("❌ Google Sheet 연결 실패: 금형백업 시트가 없습니다.")
         return
 
     try:
         df_mold = pd.read_sql_query("SELECT * FROM molds", conn)
-        
+
         if df_mold is None or df_mold.empty:
             st.warning("⚠️ 백업할 금형 데이터가 없습니다.")
             return
