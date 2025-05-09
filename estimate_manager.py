@@ -316,23 +316,26 @@ def upload_excel():
 def show_estimates():
     st.subheader("📄 견적서 목록 보기")
     
+    # 🔍 테이블 목록 출력 (디버깅 용도)
+    st.write("🔎 DB 테이블 목록 확인:")
+    st.write(pd.read_sql_query("SELECT name FROM sqlite_master WHERE type='table'", conn))
+
+    # ✅ estimates 테이블이 존재하는지 확인
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='estimates'")
+    if not cursor.fetchone():
+        st.error("❌ 'estimates' 테이블이 존재하지 않습니다.")
+        return
+    
     try:
+        # 🔍 estimates 테이블 내용 출력 (디버깅 용도)
         df = pd.read_sql_query("SELECT * FROM estimates", conn)
-        
         if df.empty:
             st.warning("⚠️ 등록된 견적서가 없습니다.")
         else:
-            st.write(df)  # 🆕 데이터프레임을 Streamlit에 직접 출력
+            st.write(df)
     except Exception as e:
         st.error(f"❌ 데이터 조회 오류: {type(e).__name__} - {e}")
-        st.stop()
 
-
-    # 최고가/최저가 표시
-    max_prices = df.groupby(['model', 'product'])['price'].transform('max')
-    min_prices = df.groupby(['model', 'product'])['price'].transform('min')
-    df['max_price_flag'] = df['price'] == max_prices
-    df['min_price_flag'] = df['price'] == min_prices
 
 def style_price(row):
     try:
