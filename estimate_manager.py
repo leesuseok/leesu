@@ -315,12 +315,18 @@ def upload_excel():
 # 견적서 목록 보기
 def show_estimates():
     st.subheader("📄 견적서 목록 보기")
+    
+    try:
+        df = pd.read_sql_query("SELECT * FROM estimates", conn)
+        
+        if df.empty:
+            st.warning("⚠️ 등록된 견적서가 없습니다.")
+        else:
+            st.write(df)  # 🆕 데이터프레임을 Streamlit에 직접 출력
+    except Exception as e:
+        st.error(f"❌ 데이터 조회 오류: {type(e).__name__} - {e}")
+        st.stop()
 
-    df = pd.read_sql_query("SELECT * FROM estimates", conn)
-
-    if df.empty:
-        st.info("등록된 견적서가 없습니다.")
-        return
 
     # 최고가/최저가 표시
     max_prices = df.groupby(['model', 'product'])['price'].transform('max')
