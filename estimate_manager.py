@@ -135,6 +135,20 @@ def restore_estimate_from_sheet():
     df = load_data_from_sheet(sheet_estimate)
     if not df.empty:
         try:
+            # ✅ 컬럼명 정리
+            df.columns = df.columns.str.strip()
+            required_columns = ['company', 'date', 'model', 'category', 'product', 'price', 'final_price']
+            missing_cols = [col for col in required_columns if col not in df.columns]
+            if missing_cols:
+                st.error(f"❌ Google Sheets의 누락된 필드: {missing_cols}")
+                return
+
+            # ✅ 데이터 타입 변환
+            df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0)
+            df['final_price'] = pd.to_numeric(df['final_price'], errors='coerce').fillna(0)
+            df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.strftime('%Y-%m-%d')
+
+            # ✅ DB에 저장
             df.to_sql('estimates', conn, if_exists='replace', index=False)
             st.success("✅ 견적서 데이터가 DB로 복원되었습니다.")
         except Exception as e:
