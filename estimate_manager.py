@@ -118,6 +118,52 @@ with st.expander("📤 Google Sheets 수동 백업"):
             backup_mold_to_sheet_bulk()
 
 
+# ✅ Google Sheets → DataFrame 변환
+def load_data_from_sheet(sheet):
+    try:
+        data = sheet.get_all_values()
+        headers = data[0]
+        rows = data[1:]
+        df = pd.DataFrame(rows, columns=headers)
+        return df
+    except Exception as e:
+        st.error(f"❌ 시트 로딩 오류: {type(e).__name__} - {e}")
+        return pd.DataFrame()
+
+# ✅ 복원 로직
+def restore_estimate_from_sheet():
+    df = load_data_from_sheet(sheet_estimate)
+    if not df.empty:
+        try:
+            df.to_sql('estimates', conn, if_exists='replace', index=False)
+            st.success("✅ 견적서 데이터가 DB로 복원되었습니다.")
+        except Exception as e:
+            st.error(f"❌ 복원 오류: {type(e).__name__} - {e}")
+    else:
+        st.warning("⚠️ Google Sheets에서 데이터를 찾을 수 없습니다.")
+
+def restore_mold_from_sheet():
+    df = load_data_from_sheet(sheet_mold)
+    if not df.empty:
+        try:
+            df.to_sql('molds', conn, if_exists='replace', index=False)
+            st.success("✅ 금형 데이터가 DB로 복원되었습니다.")
+        except Exception as e:
+            st.error(f"❌ 복원 오류: {type(e).__name__} - {e}")
+    else:
+        st.warning("⚠️ Google Sheets에서 데이터를 찾을 수 없습니다.")
+
+# ✅ 수동 복원 버튼
+with st.expander("🔄 Google Sheets 수동 복원"):
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🔄 견적서 복원"):
+            restore_estimate_from_sheet()
+
+    with col2:
+        if st.button("🔄 금형정보 복원"):
+            restore_mold_from_sheet()
+
 # DB 초기화
 import sqlite3
 import streamlit as st
