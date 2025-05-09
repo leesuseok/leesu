@@ -314,14 +314,15 @@ def show_estimates():
     df['max_price_flag'] = df['price'] == max_prices
     df['min_price_flag'] = df['price'] == min_prices
 
-    def style_price(row):
-        val = int(round(row['price']))
-        if row['max_price_flag']:
-            return f"<span style='color:red;font-weight:bold'>{val:,}</span>"
-        elif row['min_price_flag']:
-            return f"<span style='color:blue;font-weight:bold'>{val:,}</span>"
-        else:
-            return f"{val:,}"
+def style_price(row):
+    try:
+        # 숫자로 변환 시도
+        val = float(row['price'])
+        return f"₩ {int(round(val)):,}"
+    except (ValueError, TypeError):
+        # 변환 실패 시 원본 값 반환
+        return row['price']
+
 
     df['견적가'] = df.apply(style_price, axis=1)
     df['결정가'] = df['final_price'].apply(lambda x: f"{int(round(x)):,}")
