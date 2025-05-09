@@ -315,10 +315,6 @@ def upload_excel():
 # 견적서 목록 보기
 def show_estimates():
     st.subheader("📄 견적서 목록 보기")
-    
-    # 🔍 테이블 목록 출력 (디버깅 용도)
-    st.write("🔎 DB 테이블 목록 확인:")
-    st.write(pd.read_sql_query("SELECT name FROM sqlite_master WHERE type='table'", conn))
 
     # ✅ estimates 테이블이 존재하는지 확인
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='estimates'")
@@ -327,15 +323,13 @@ def show_estimates():
         return
     
     try:
-        # 🔍 estimates 테이블 내용 출력 (디버깅 용도)
         df = pd.read_sql_query("SELECT * FROM estimates", conn)
         if df.empty:
             st.warning("⚠️ 등록된 견적서가 없습니다.")
         else:
-            st.write(df)
+            st.dataframe(df, use_container_width=True)
     except Exception as e:
         st.error(f"❌ 데이터 조회 오류: {type(e).__name__} - {e}")
-
 
 def style_price(row):
     try:
