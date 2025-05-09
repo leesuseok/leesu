@@ -312,59 +312,69 @@ def upload_excel():
             conn.commit()
             st.success(f"✅ '{file.name}' 업로드 및 등록 완료")
 
-# 견적서 목록 보기
+# ✅ 견적서 목록 보기
+
 def show_estimates():
-    st.subheader("📄 견적서 목록 보기")
+    st.subheader('📄 견적서 목록 보기')
 
     # ✅ estimates 테이블이 존재하는지 확인
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='estimates'")
     if not cursor.fetchone():
         st.error("❌ 'estimates' 테이블이 존재하지 않습니다.")
         return
-    
+
     try:
-        df = pd.read_sql_query("SELECT * FROM estimates", conn)
+        df = pd.read_sql_query('SELECT * FROM estimates', conn)
         if df.empty:
-            st.warning("⚠️ 등록된 견적서가 없습니다.")
+            st.warning('⚠️ 등록된 견적서가 없습니다.')
+            return
+
+        # ✅ 가격 포맷팅
+        df['견적가'] = df['price'].map(lambda x: f"₩ {int(x):,}" if pd.notna(x) else '-')
+        df['결정가'] = df['final_price'].map(lambda x: f"₩ {int(x):,}" if pd.notna(x) else '-')
+
+        # ✅ 편집용 테이블 생성
+        editor_df = df[['id', 'company', 'model', 'category', 'product', '견적가', '결정가', 'date']].copy()
+        editor_df.columns = ['ID', '상호', '모델', '구분', '품명', '견적가', '결정가', '날짜']
+        editor_df.insert(1, '선택', False)
+
+        selected = st.data_editor(editor_df, use_container_width=True, hide_index=True)
+        selected_ids = selected[selected['선택'] == True]['ID'].tolist()
+
+        # ✅ 선택 삭제 기능
+        if selected_ids:
+            if st.button('🗑️ 선택 항목 삭제'):
+                cursor.executemany('DELETE FROM estimates WHERE id = ?', [(i,) for i in selected_ids])
+                conn.commit()
+                st.success(f'✅ {len(selected_ids)}개 항목이 삭제되었습니다.')
+                st.experimental_rerun()
+
+        # ✅ 전체 삭제 기능
+        with st.expander('⚠ 전체 삭제', expanded=False):
+            st.warning('모든 견적서를 삭제합니다. 정말 삭제하시겠습니까?')
+            if st.button('🔴 전체 견적서 삭제'):
+                cursor.execute('DELETE FROM estimates')
+                conn.commit()
+                st.success('📛 전체 견적서가 삭제되었습니다.')
+                st.experimental_rerun()
+
+        # ✅ 모델 필터링 및 강조 표시
+        st.markdown('---')
+        st.subheader('👁 견적서 보기 (모델 필터 + 강조)')
+
+        model_list = sorted(df['model'].dropna().unique())
+        selected_models = st.multiselect('모델을 선택하세요', model_list, default=model_list)
+
+        if selected_models:
+            filtered_df = df[df['model'].isin(selected_models)]
         else:
-            st.dataframe(df, use_container_width=True)
-            
-            # ✅ 선택 삭제용 Editor
-            editor_df = df[['id', 'company', 'model', 'category', 'product', 'price', 'final_price', 'date']].copy()
-            editor_df.columns = ['ID', '상호', '모델', '구분', '품명', '견적가', '결정가', '날짜']
-            editor_df.insert(1, '선택', False)
+            filtered_df = df
 
-            selected = st.data_editor(editor_df, use_container_width=True, hide_index=True)
-            selected_ids = selected[selected['선택'] == True]['ID'].tolist()
-
-            if selected_ids:
-                st.write(f"🔍 선택된 ID: {selected_ids}")
-                if st.button("🗑️ 선택 항목 삭제"):
-                    cursor.executemany("DELETE FROM estimates WHERE id = ?", [(i,) for i in selected_ids])
-                    conn.commit()
-                    st.success(f"✅ {len(selected_ids)}개 항목이 삭제되었습니다.")
-                    st.rerun()
+        st.dataframe(filtered_df, use_container_width=True)
 
     except Exception as e:
-        st.error(f"❌ 데이터 조회 오류: {type(e).__name__} - {e}")
+        st.error(f'❌ 데이터 조회 오류: {type(e).__name__} - {e}')
 
-
-    # ✅ 보기용 테이블
-    st.markdown("---")
-    st.subheader("👁 견적서 보기 (모델 필터 + 강조)")
-
-    model_list = sorted(df['model'].dropna().unique())
-    selected_models = st.multiselect("모델을 선택하세요", model_list, default=model_list)
-
-    filtered_df = df[df['model'].isin(selected_models)]
-    styled_df = filtered_df[['company', 'model', 'category', 'product', '견적가', '결정가', 'date']].copy()
-    styled_df.columns = ['상호', '모델', '구분', '품명', '견적가', '결정가', '날짜']
-
-    st.markdown("""
-        <style>table td span { font-weight: bold; }</style>
-        <div>※ 최고가는 <span style='color:red'>빨간색</span>, 최저가는 <span style='color:blue'>파란색</span>으로 표시됩니다.</div>
-    """, unsafe_allow_html=True)
-    st.markdown(styled_df.to_html(escape=False, index=False), unsafe_allow_html=True)
 
     # ✅ 견적가 비교표 (차이 포함, 카테고리별 소계 + 총합계 강조)
     import re
