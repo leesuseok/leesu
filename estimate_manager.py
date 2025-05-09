@@ -328,46 +328,26 @@ def show_estimates():
             st.warning("⚠️ 등록된 견적서가 없습니다.")
         else:
             st.dataframe(df, use_container_width=True)
+            
+            # ✅ 선택 삭제용 Editor
+            editor_df = df[['id', 'company', 'model', 'category', 'product', 'price', 'final_price', 'date']].copy()
+            editor_df.columns = ['ID', '상호', '모델', '구분', '품명', '견적가', '결정가', '날짜']
+            editor_df.insert(1, '선택', False)
+
+            selected = st.data_editor(editor_df, use_container_width=True, hide_index=True)
+            selected_ids = selected[selected['선택'] == True]['ID'].tolist()
+
+            if selected_ids:
+                st.write(f"🔍 선택된 ID: {selected_ids}")
+                if st.button("🗑️ 선택 항목 삭제"):
+                    cursor.executemany("DELETE FROM estimates WHERE id = ?", [(i,) for i in selected_ids])
+                    conn.commit()
+                    st.success(f"✅ {len(selected_ids)}개 항목이 삭제되었습니다.")
+                    st.rerun()
+
     except Exception as e:
         st.error(f"❌ 데이터 조회 오류: {type(e).__name__} - {e}")
 
-def style_price(row):
-    try:
-        # 숫자로 변환 시도
-        val = float(row['price'])
-        return f"₩ {int(round(val)):,}"
-    except (ValueError, TypeError):
-        # 변환 실패 시 원본 값 반환
-        return row['price']
-
-
-    df['견적가'] = df.apply(style_price, axis=1)
-    df['결정가'] = df['final_price'].apply(lambda x: f"{int(round(x)):,}")
-    df['견적가(숫자)'] = df['price'].apply(lambda x: int(round(x)))
-    df['결정가(숫자)'] = df['final_price'].apply(lambda x: int(round(x)))
-
-    # ✅ 선택 삭제용 Editor
-    editor_df = df[['id', 'company', 'model', 'category', 'product', '견적가(숫자)', '결정가(숫자)', 'date']].copy()
-    editor_df.columns = ['ID', '상호', '모델', '구분', '품명', '견적가', '결정가', '날짜']
-    editor_df.insert(1, '선택', False)
-
-    selected = st.data_editor(editor_df, use_container_width=True, hide_index=True)
-    selected_ids = selected[selected['선택'] == True]['ID'].tolist()
-
-    if selected_ids:
-        if st.button("🗑️ 선택 항목 삭제"):
-            cursor.executemany("DELETE FROM estimates WHERE id = ?", [(i,) for i in selected_ids])
-            conn.commit()
-            st.success(f"✅ {len(selected_ids)}개 항목이 삭제되었습니다.")
-            st.rerun()
-
-    with st.expander("⚠ 전체 삭제", expanded=False):
-        st.warning("모든 견적서를 삭제합니다. 정말 삭제하시겠습니까?")
-        if st.button("🔴 전체 견적서 삭제"):
-            cursor.execute("DELETE FROM estimates")
-            conn.commit()
-            st.success("📛 전체 견적서가 삭제되었습니다.")
-            st.rerun()
 
     # ✅ 보기용 테이블
     st.markdown("---")
