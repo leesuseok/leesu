@@ -370,7 +370,11 @@ def show_estimates():
         else:
             filtered_df = df
 
-        st.dataframe(filtered_df, use_container_width=True)
+        # ✅ 중복 제거 및 필요한 컬럼만 보기 화면에 표시
+        display_df = filtered_df[['company', 'model', 'category', 'product', '견적가', '결정가', 'date']].copy()
+        display_df.columns = ['상호', '모델', '구분', '품명', '견적가', '결정가', '날짜']
+
+        st.dataframe(display_df, use_container_width=True)
 
     except Exception as e:
         st.error(f'❌ 데이터 조회 오류: {type(e).__name__} - {e}')
