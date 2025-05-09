@@ -153,16 +153,16 @@ def restore_mold_from_sheet():
     else:
         st.warning("⚠️ Google Sheets에서 데이터를 찾을 수 없습니다.")
 
-# ✅ 수동 복원 버튼
-with st.expander("🔄 Google Sheets 수동 복원"):
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🔄 견적서 복원"):
-            restore_estimate_from_sheet()
+# ✅ 수동 복원 버튼 (🆕: expander 없이 직접 표시)
+st.markdown("### 🔄 Google Sheets 수동 복원")
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("🔄 견적서 복원"):
+        restore_estimate_from_sheet()
 
-    with col2:
-        if st.button("🔄 금형정보 복원"):
-            restore_mold_from_sheet()
+with col2:
+    if st.button("🔄 금형정보 복원"):
+        restore_mold_from_sheet()
 
 # DB 초기화
 import sqlite3
